@@ -325,6 +325,8 @@ def addFSOptions(parser):
     parser.add_option("--frame-capture", action="store_true",
             help="Stores changed frame buffers from the VNC server to compressed "\
             "files in the gem5 output directory")
+    parser.add_option("--SSDConfig", action="store", type="string",
+            help="Place configuration file of SimpleSSD")
 
     if buildEnv['TARGET_ISA'] == "arm":
         parser.add_option("--bare-metal", action="store_true",

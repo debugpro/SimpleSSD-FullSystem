@@ -43,6 +43,7 @@ from m5.objects import *
 from Benchmarks import *
 from m5.util import *
 from common import PlatformConfig
+import SSDConfigParser
 
 # Populate to reflect supported os types per target ISA
 os_types = { 'alpha' : [ 'linux' ],
@@ -64,9 +65,27 @@ class CowIdeDisk(IdeDisk):
     def childImage(self, ci):
         self.image.child.image_file = ci
 
+class NullIdeDisk(IdeDisk):
+    def setSize(self, size):
+        self.image = NullDiskImage(disk_size = size)
+
 class MemBus(SystemXBar):
     badaddr_responder = BadAddr()
     default = Self.badaddr_responder.pio
+
+def getSSDSize(SSDConfig):
+    cfgparser = SSDConfigParser.SSDConfigParser()
+
+    cfgparser.read(SSDConfig)
+
+    return cfgparser.getint('ssd', 'NumChannel') * \
+           cfgparser.getint('ssd', 'NumPackage') * \
+           cfgparser.getint('ssd', 'NumDie') * \
+           cfgparser.getint('ssd', 'NumPlane') * \
+           cfgparser.getint('ssd', 'NumBlock') * \
+           cfgparser.getint('ssd', 'NumPage') * \
+           cfgparser.getint('ssd', 'SizePage') * \
+           cfgparser.getfloat('ftl', 'FTLOP')
 
 def fillInCmdline(mdesc, template, **kwargs):
     kwargs.setdefault('disk', mdesc.disk())
@@ -203,8 +222,9 @@ def makeSparcSystem(mem_mode, mdesc=None, cmdline=None):
     return self
 
 def makeArmSystem(mem_mode, machine_type, num_cpus=1, mdesc=None,
-                  dtb_filename=None, bare_metal=False, cmdline=None,
-                  external_memory="", ruby=False, security=False):
+                  SSDConfig=None, dtb_filename=None, bare_metal=False,
+                  cmdline=None, external_memory="",
+                  ruby=False, security=False):
     assert machine_type
 
     default_dtbs = {
@@ -267,15 +287,19 @@ def makeArmSystem(mem_mode, machine_type, num_cpus=1, mdesc=None,
 
     self.cf0 = CowIdeDisk(driveID='master')
     self.cf0.childImage(mdesc.disk())
+    self.cf1 = NullIdeDisk(driveID='master',
+                           ssd_enable=True,
+                           ssd_config=SSDConfig)
+    self.cf1.setSize(getSSDSize(SSDConfig))
     # Old platforms have a built-in IDE or CF controller. Default to
     # the IDE controller if both exist. New platforms expect the
     # storage controller to be added from the config script.
     if hasattr(self.realview, "ide"):
-        self.realview.ide.disks = [self.cf0]
+        self.realview.ide.disks = [self.cf0, self.cf1]
     elif hasattr(self.realview, "cf_ctrl"):
-        self.realview.cf_ctrl.disks = [self.cf0]
+        self.realview.cf_ctrl.disks = [self.cf0, self.cf1]
     else:
-        self.pci_ide = IdeController(disks=[self.cf0])
+        self.pci_ide = IdeController(disks=[self.cf0, self.cf1])
         pci_devices.append(self.pci_ide)
 
     self.mem_ranges = []
@@ -514,7 +538,8 @@ def connectX86RubySystem(x86_sys):
     x86_sys.pc.attachIO(x86_sys.iobus, x86_sys._dma_ports)
 
 
-def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
+def makeX86System(mem_mode, numCPUs=1, mdesc=None, SSDConfig=None,
+                  self=None, Ruby=False):
     if self == None:
         self = X86System()
 
@@ -554,9 +579,11 @@ def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
 
     # Disks
     disk0 = CowIdeDisk(driveID='master')
-    disk2 = CowIdeDisk(driveID='master')
+    disk2 = NullIdeDisk(driveID='master',
+                        ssd_enable=True,
+                        ssd_config=SSDConfig)
     disk0.childImage(mdesc.disk())
-    disk2.childImage(disk('linux-bigswap2.img'))
+    disk2.setSize(getSSDSize(SSDConfig))
     self.pc.south_bridge.ide.disks = [disk0, disk2]
 
     # Add in a Bios information structure.
@@ -625,12 +652,12 @@ def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
     self.intel_mp_table.base_entries = base_entries
     self.intel_mp_table.ext_entries = ext_entries
 
-def makeLinuxX86System(mem_mode, numCPUs=1, mdesc=None, Ruby=False,
-                       cmdline=None):
+def makeLinuxX86System(mem_mode, numCPUs=1, mdesc=None, SSDConfig=None,
+                       Ruby=False, cmdline=None):
     self = LinuxX86System()
 
     # Build up the x86 system and then specialize it for Linux
-    makeX86System(mem_mode, numCPUs, mdesc, self, Ruby)
+    makeX86System(mem_mode, numCPUs, mdesc, SSDConfig, self, Ruby)
 
     # We assume below that there's at least 1MB of memory. We'll require 2
     # just to avoid corner cases.
