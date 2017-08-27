@@ -449,13 +449,18 @@ IdeDisk::doDmaDataRead()
     Tick totalDiskDelay = diskDelay + (curPrd.getByteCount() / SectorSize);
 
     if (ssdEnabled) {
+        uint32_t nblk;
         uint64_t slpn;
         uint16_t nlp, offset;
 
+        nblk = (curPrd.getByteCount() - 1) / SectorSize + 1;
+
         slpn = curSector / param->page_size;
         offset = curSector % param->page_size;
-        nlp = (curPrd.getByteCount() / SectorSize +
-              offset + param->page_size - 1) / param->page_size;
+        nlp = (nblk + offset + param->page_size - 1) / param->page_size;
+
+        DPRINTF(IdeDisk, "doDmaRead, sector %d + %d -> LPN %" PRIu64 " + %d\n",
+                curSector, nblk, slpn, nlp);
 
         totalDiskDelay = ftl->write(slpn, nlp);
     }
@@ -569,13 +574,18 @@ IdeDisk::doDmaDataWrite()
     uint32_t bytesRead = 0;
 
     if (ssdEnabled) {
+        uint32_t nblk;
         uint64_t slpn;
         uint16_t nlp, offset;
 
+        nblk = (curPrd.getByteCount() - 1) / SectorSize + 1;
+
         slpn = curSector / param->page_size;
         offset = curSector % param->page_size;
-        nlp = (curPrd.getByteCount() / SectorSize +
-              offset + param->page_size - 1) / param->page_size;
+        nlp = (nblk + offset + param->page_size - 1) / param->page_size;
+
+        DPRINTF(IdeDisk, "doDmaWrite, sector %d + %d -> LPN %" PRIu64 " + %d\n",
+                curSector, nblk, slpn, nlp);
 
         totalDiskDelay = ftl->read(slpn, nlp);
     }
