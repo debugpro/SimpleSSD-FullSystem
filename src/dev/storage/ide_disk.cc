@@ -200,11 +200,13 @@ IdeDisk::~IdeDisk()
     // destroy the data buffer
     delete [] dataBuffer;
 
-    delete ftl;
-    delete param;
-    delete pal;
-    delete stats;
-    delete config;
+    if (ssdEnabled) {
+        delete ftl;
+        delete param;
+        delete pal;
+        delete stats;
+        delete config;
+    }
 }
 
 void
