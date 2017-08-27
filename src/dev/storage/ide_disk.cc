@@ -48,6 +48,7 @@
 #include "dev/storage/ide_disk.hh"
 
 #include <cerrno>
+#include <cinttypes>
 #include <cstring>
 #include <deque>
 #include <string>
