@@ -85,7 +85,7 @@ def getSSDSize(SSDConfig):
            cfgparser.getint('ssd', 'NumBlock') * \
            cfgparser.getint('ssd', 'NumPage') * \
            cfgparser.getint('ssd', 'SizePage') * \
-           cfgparser.getfloat('ftl', 'FTLOP')
+           (1.0 - cfgparser.getfloat('ftl', 'FTLOP'))
 
 def fillInCmdline(mdesc, template, **kwargs):
     kwargs.setdefault('disk', mdesc.disk())
