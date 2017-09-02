@@ -233,6 +233,13 @@ def build_test_system(np):
 
         MemConfig.config_mem(options, test_sys)
 
+    if is_kvm_cpu(TestCPUClass) or is_kvm_cpu(FutureClass):
+        test_sys.eventq_index = 0
+        for idx, cpu in enumerate(test_sys.cpu):
+            for obj in cpu.descendants():
+                obj.eventq_index = test_sys.eventq_index
+            cpu.eventq_index = idx + 1
+
     return test_sys
 
 def build_drive_system(np):
@@ -368,5 +375,6 @@ if options.timesync:
 if options.frame_capture:
     VncServer.frame_capture = True
 
+root.sim_quantum = 1000000000
 Simulation.setWorkCountOptions(test_sys, options)
 Simulation.run(options, root, test_sys, FutureClass)
