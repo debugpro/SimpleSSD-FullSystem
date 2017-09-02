@@ -202,7 +202,7 @@ def makeSparcSystem(mem_mode, mdesc=None, cmdline=None):
 
     return self
 
-def makeArmSystem(mem_mode, machine_type, num_cpus=1, mdesc=None,
+def makeArmSystem(mem_mode, SSDConfig, machine_type, num_cpus=1, mdesc=None,
                   dtb_filename=None, bare_metal=False, cmdline=None,
                   external_memory="", ruby=False, security=False):
     assert machine_type
@@ -514,7 +514,8 @@ def connectX86RubySystem(x86_sys):
     x86_sys.pc.attachIO(x86_sys.iobus, x86_sys._dma_ports)
 
 
-def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
+def makeX86System(mem_mode, SSDConfig, numCPUs=1, mdesc=None, self=None,
+                  Ruby=False):
     if self == None:
         self = X86System()
 
@@ -554,10 +555,10 @@ def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
 
     # Disks
     disk0 = CowIdeDisk(driveID='master')
-    disk2 = CowIdeDisk(driveID='master')
+    # disk2 = CowIdeDisk(driveID='master')
     disk0.childImage(mdesc.disk())
-    disk2.childImage(disk('linux-bigswap2.img'))
-    self.pc.south_bridge.ide.disks = [disk0, disk2]
+    # disk2.childImage(disk('linux-bigswap2.img'))
+    self.pc.south_bridge.ide.disks = [disk0] # [disk0, disk2]
 
     # Add in a Bios information structure.
     structures = [X86SMBiosBiosInformation()]
@@ -625,12 +626,12 @@ def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
     self.intel_mp_table.base_entries = base_entries
     self.intel_mp_table.ext_entries = ext_entries
 
-def makeLinuxX86System(mem_mode, numCPUs=1, mdesc=None, Ruby=False,
+def makeLinuxX86System(mem_mode, SSDConfig, numCPUs=1, mdesc=None, Ruby=False,
                        cmdline=None):
     self = LinuxX86System()
 
     # Build up the x86 system and then specialize it for Linux
-    makeX86System(mem_mode, numCPUs, mdesc, self, Ruby)
+    makeX86System(mem_mode, SSDConfig, numCPUs, mdesc, self, Ruby)
 
     # We assume below that there's at least 1MB of memory. We'll require 2
     # just to avoid corner cases.
@@ -672,7 +673,7 @@ def makeLinuxX86System(mem_mode, numCPUs=1, mdesc=None, Ruby=False,
 
     # Command line
     if not cmdline:
-        cmdline = 'earlyprintk=ttyS0 console=ttyS0 lpj=7999923 root=/dev/hda1'
+        cmdline = 'earlyprintk=ttyS0 console=ttyS0 lpj=7999923 root=/dev/sda1'
     self.boot_osflags = fillInCmdline(mdesc, cmdline)
     self.kernel = binary('x86_64-vmlinux-2.6.22.9')
     return self

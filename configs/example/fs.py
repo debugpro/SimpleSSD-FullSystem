@@ -82,7 +82,7 @@ def cmd_line_template():
         return open(options.command_line_file).read().strip()
     return None
 
-def build_test_system(np):
+def build_test_system(np, SSDConfig):
     cmdline = cmd_line_template()
     if buildEnv['TARGET_ISA'] == "alpha":
         test_sys = makeLinuxAlphaSystem(test_mem_mode, bm[0], options.ruby,
@@ -92,11 +92,12 @@ def build_test_system(np):
     elif buildEnv['TARGET_ISA'] == "sparc":
         test_sys = makeSparcSystem(test_mem_mode, bm[0], cmdline=cmdline)
     elif buildEnv['TARGET_ISA'] == "x86":
-        test_sys = makeLinuxX86System(test_mem_mode, options.num_cpus, bm[0],
-                options.ruby, cmdline=cmdline)
+        test_sys = makeLinuxX86System(test_mem_mode, SSDConfig,
+                options.num_cpus, bm[0], options.ruby, cmdline=cmdline)
     elif buildEnv['TARGET_ISA'] == "arm":
-        test_sys = makeArmSystem(test_mem_mode, options.machine_type,
-                                 options.num_cpus, bm[0], options.dtb_filename,
+        test_sys = makeArmSystem(test_mem_mode, SSDConfig,
+                                 options.machine_type, options.num_cpus, bm[0],
+                                 options.dtb_filename,
                                  bare_metal=options.bare_metal,
                                  cmdline=cmdline,
                                  external_memory=options.external_memory_system,
@@ -347,7 +348,7 @@ else:
 
 np = options.num_cpus
 
-test_sys = build_test_system(np)
+test_sys = build_test_system(np, options.SSDConfig)
 if len(bm) == 2:
     drive_sys = build_drive_system(np)
     root = makeDualRoot(True, test_sys, drive_sys, options.etherdump)
