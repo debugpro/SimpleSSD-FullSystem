@@ -556,6 +556,9 @@ main.Append(CPPPATH=[Dir('ext')])
 # Add shared top-level headers
 main.Prepend(CPPPATH=Dir('include'))
 
+# Add simplessd directory
+main.Append(CPPPATH=Dir('src/dev/storage/simplessd'))
+
 def strip_build_path(path, env):
     path = str(path)
     variant_base = env['BUILDROOT'] + os.path.sep
