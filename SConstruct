@@ -692,6 +692,11 @@ if main['GCC'] or main['CLANG']:
         main.Append(CCFLAGS=['-I/usr/local/include'])
         main.Append(CXXFLAGS=['-I/usr/local/include'])
 
+    # Maybe gem5 uses inttypes.h somewhere.
+    # For old compilers, cinttypes macro not defined.
+    # So define __STDC_FORMAT_MACROS here.
+    main.Append(CXXFLAGS=['-D__STDC_FORMAT_MACROS'])
+
     main['FILTER_PSHLINKFLAGS'] = lambda x: str(x).replace(' -shared', '')
     main['PSHLINKFLAGS'] = main.subst('${FILTER_PSHLINKFLAGS(SHLINKFLAGS)}')
     main['PLINKFLAGS'] = main.subst('${LINKFLAGS}')
