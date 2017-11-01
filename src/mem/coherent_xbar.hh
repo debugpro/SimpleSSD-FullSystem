@@ -331,7 +331,7 @@ class CoherentXBar : public BaseXBar
 
     /** Function called by the port when the crossbar is recieving a Atomic
       transaction.*/
-    Tick recvAtomic(PacketPtr pkt, PortID slave_port_id);
+    virtual Tick recvAtomic(PacketPtr pkt, PortID slave_port_id);
 
     /** Function called by the port when the crossbar is recieving an
         atomic snoop transaction.*/
