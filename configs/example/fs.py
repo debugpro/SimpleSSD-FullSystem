@@ -234,6 +234,14 @@ def build_test_system(np, SSDConfig):
 
         MemConfig.config_mem(options, test_sys)
 
+    if buildEnv['TARGET_ISA'] == "x86":
+        lapics = []
+
+        for i in xrange(np):
+            lapics.append(test_sys.cpu[i].interrupts[0])
+
+        test_sys.membus.lapics = lapics
+
     if is_kvm_cpu(TestCPUClass) or is_kvm_cpu(FutureClass):
         test_sys.eventq_index = 0
         for idx, cpu in enumerate(test_sys.cpu):
