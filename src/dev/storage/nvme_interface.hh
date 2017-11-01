@@ -26,6 +26,7 @@
 #include "dev/pci/device.hh"
 #include "dev/storage/simplessd/hil/nvme/interface.hh"
 #include "dev/storage/simplessd/util/config.hh"
+#include "params/NVMeInterface.hh"
 
 typedef enum _INTERRUPT_MODE {
   INTERRUPT_PIN,

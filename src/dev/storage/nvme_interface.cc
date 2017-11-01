@@ -20,24 +20,22 @@
 #include "dev/storage/nvme_interface.hh"
 
 #include "cpu/intr_control.hh"
-#include "dev/storage/nvme/nvme_def.hh"
+#include "debug/NVMeInterrupt.hh"
 #include "dev/storage/simplessd/hil/nvme/controller.hh"
+#include "dev/storage/simplessd/hil/nvme/def.hh"
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
 
+using namespace SimpleSSD;
+
 NVMeInterface::NVMeInterface(Params *p)
-    : PciDevice(p), configPath(p->SimpleSSDConfig), queueEvent(this),
-      workEvent(this) {
+    : PciDevice(p), configPath(p->SSDConfig), periodWork(0), periodQueue(0),
+      IS(0), ISold(0), mode(INTERRUPT_PIN), queueEvent(this), workEvent(this) {
   if (!conf.init(configPath)) {
     panic("Failed to read SimpleSSD configuration");
   }
 
-  pController = new SimpleSSD::HIL::NVME::Controller(this, &conf);
-  period = 0;
-
-  IS = 0;
-  ISold = 0;
-  mode = INTERRUPT_PIN;
+  pController = new HIL::NVMe::Controller(this, &conf);
 }
 
 NVMeInterface::~NVMeInterface() { delete pController; }
@@ -210,15 +208,17 @@ Tick NVMeInterface::read(PacketPtr pkt) {
   Addr addr = pkt->getAddr();
   int size = pkt->getSize();
   uint8_t *buffer = pkt->getPtr<uint8_t>();
+  Tick begin = curTick();
+  Tick end = curTick();
 
   if (addr >= register_addr && addr + size <= register_addr + register_size) {
     int offset = addr - register_addr;
 
-    if (offset >= REG_DOORBELL_BEGIN) {
+    if (offset >= HIL::NVMe::REG_DOORBELL_BEGIN) {
       // Read on doorbell register is vendor specific
       memset(buffer, 0, size);
     } else {
-      pController->readRegister(offset, size, buffer);
+      pController->readRegister(offset, size, buffer, end);
     }
   } else if (addr >= table_addr && addr + size <= table_addr + table_size) {
 
@@ -232,19 +232,21 @@ Tick NVMeInterface::read(PacketPtr pkt) {
 
   pkt->makeAtomicResponse();
 
-  return pioDelay;
+  return end - begin;
 }
 
 Tick NVMeInterface::write(PacketPtr pkt) {
   Addr addr = pkt->getAddr();
   int size = pkt->getSize();
   uint8_t *buffer = pkt->getPtr<uint8_t>();
+  Tick begin = curTick();
+  Tick end = curTick();
 
   if (addr >= register_addr && addr + size <= register_addr + register_size) {
     int offset = addr - register_addr;
 
-    if (offset >= REG_DOORBELL_BEGIN) {
-      const int dstrd = (4 << NVME_CAP_DSTRD);
+    if (offset >= HIL::NVMe::REG_DOORBELL_BEGIN) {
+      const int dstrd = 4;
       uint32_t uiTemp, uiMask;
       uint16_t uiDoorbell;
 
@@ -252,19 +254,19 @@ Tick NVMeInterface::write(PacketPtr pkt) {
       memcpy(&uiDoorbell, buffer, 2);
 
       // Calculate Queue Type and Queue ID from offset
-      offset -= REG_DOORBELL_BEGIN;
+      offset -= HIL::NVMe::REG_DOORBELL_BEGIN;
       uiTemp = offset / dstrd;
       uiMask = (uiTemp & 0x00000001); // 0 for Submission Queue Tail Doorbell
                                       // 1 for Completion Queue Head Doorbell
       uiTemp = (uiTemp >> 1);         // Queue ID
 
       if (uiMask) { // Completion Queue
-        pController->ringCQDoorbell(uiTemp, uiDoorbell);
+        pController->ringCQHeadDoorbell(uiTemp, uiDoorbell, end);
       } else { // Submission Queue
-        pController->ringSQDoorbell(uiTemp, uiDoorbell);
+        pController->ringSQTailDoorbell(uiTemp, uiDoorbell, end);
       }
     } else {
-      pController->writeRegister(offset, size, buffer);
+      pController->writeRegister(offset, size, buffer, end);
     }
   } else if (addr >= table_addr && addr + size <= table_addr + table_size) {
     uint64_t entry = (addr - table_addr) / 16;
@@ -284,21 +286,21 @@ Tick NVMeInterface::write(PacketPtr pkt) {
 
   pkt->makeAtomicResponse();
 
-  return pioDelay;
+  return end - begin;
 }
 
 void NVMeInterface::writeInterrupt(Addr addr, size_t size, uint8_t *data) {
   Addr dmaAddr = hostInterface.dmaAddr(addr);
 
-  dmaWrite(dmaAddr, size, NULL, data);
+  DmaDevice::dmaWrite(dmaAddr, size, NULL, data);
 }
 
 void NVMeInterface::dmaRead(uint64_t addr, uint64_t size, uint8_t *buffer) {
-  dmaRead(pciToDma(addr), size, nullptr, buffer);
+  DmaDevice::dmaRead(pciToDma(addr), size, nullptr, buffer);
 }
 
 void NVMeInterface::dmaWrite(uint64_t addr, uint64_t size, uint8_t *buffer) {
-  dmaWrite(pciToDma(addr), size, nullptr, buffer);
+  DmaDevice::dmaWrite(pciToDma(addr), size, nullptr, buffer);
 }
 
 void NVMeInterface::updateInterrupt(uint16_t iv, bool post) {
@@ -366,14 +368,24 @@ void NVMeInterface::getVendorID(uint16_t &vid, uint16_t &ssvid) {
   ssvid = config.subsystemVendorID;
 }
 
-void NVMeInterface::updateController() {
-  pController->update();
+void NVMeInterface::doWork() {
+  Tick handling = curTick();
 
-  schedule(updateEvent, curTick() + period);
+  pController->work(handling);
+
+  schedule(workEvent, handling + periodWork);
+}
+
+void NVMeInterface::doQueue() {
+  Tick handling = curTick();
+
+  pController->collectSQueue(handling);
+
+  schedule(queueEvent, handling + periodQueue);
 }
 
 void NVMeInterface::enableController(Tick q, Tick w) {
-  periodQueue = p;
+  periodQueue = q;
   periodWork = w;
 
   schedule(queueEvent, curTick() + periodQueue);
