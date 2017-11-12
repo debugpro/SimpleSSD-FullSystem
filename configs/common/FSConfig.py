@@ -278,6 +278,12 @@ def makeArmSystem(mem_mode, SSDConfig, machine_type, num_cpus=1, mdesc=None,
         self.pci_ide = IdeController(disks=[self.cf0])
         pci_devices.append(self.pci_ide)
 
+    if hasattr(self.realview, "nvme"):
+        self.realview.nvme.SSDConfig = SSDConfig
+    else:
+        self.pci_nvme = NVMeInterface(SSDConfig=SSDConfig)
+        pci_devices.append(self.pci_nvme)
+
     self.mem_ranges = []
     size_remain = long(Addr(mdesc.mem()))
     for region in self.realview._mem_regions:
@@ -482,7 +488,8 @@ def connectX86ClassicSystem(x86_sys, numCPUs):
     #  4) then the entire PCI address space and beyond.
     x86_sys.bridge.ranges = \
         [
-        AddrRange(0xC0000000, 0xFFFF0000),
+        AddrRange(0xC0000000, 0xFEE00000 - 1),
+        AddrRange(0xFEF00000, 0xFFFF0000),
         AddrRange(IO_address_space_base,
                   interrupts_address_space_base - 1),
         AddrRange(pci_config_address_space_base,
@@ -494,7 +501,8 @@ def connectX86ClassicSystem(x86_sys, numCPUs):
     x86_sys.apicbridge = Bridge(delay='50ns')
     x86_sys.apicbridge.slave = x86_sys.iobus.master
     x86_sys.apicbridge.master = x86_sys.membus.slave
-    x86_sys.apicbridge.ranges = [AddrRange(interrupts_address_space_base,
+    x86_sys.apicbridge.ranges = [AddrRange(0xFEE00000, 0xFEF00000 - 1),
+                                 AddrRange(interrupts_address_space_base,
                                            interrupts_address_space_base +
                                            numCPUs * APIC_range_size
                                            - 1)]
@@ -560,6 +568,11 @@ def makeX86System(mem_mode, SSDConfig, numCPUs=1, mdesc=None, self=None,
     # disk2.childImage(disk('linux-bigswap2.img'))
     self.pc.south_bridge.ide.disks = [disk0] # [disk0, disk2]
 
+    # NVMe
+    self.pc.south_bridge.nvme.SSDConfig = SSDConfig
+    self.pc.south_bridge.nvme.InterruptLine = 17
+    self.pc.south_bridge.nvme.InterruptPin = 1
+
     # Add in a Bios information structure.
     structures = [X86SMBiosBiosInformation()]
     self.smbios_table.structures = structures
@@ -599,7 +612,16 @@ def makeX86System(mem_mode, SSDConfig, numCPUs=1, mdesc=None, self=None,
             source_bus_irq = 0 + (4 << 2),
             dest_io_apic_id = io_apic.id,
             dest_io_apic_intin = 16)
+    pci_dev5_inta = X86IntelMPIOIntAssignment(
+            interrupt_type = 'INT',
+            polarity = 'ConformPolarity',
+            trigger = 'ConformTrigger',
+            source_bus_id = 0,
+            source_bus_irq = 0 + (5 << 2),
+            dest_io_apic_id = io_apic.id,
+            dest_io_apic_intin = 17)
     base_entries.append(pci_dev4_inta)
+    base_entries.append(pci_dev5_inta)
     def assignISAInt(irq, apicPin):
         assign_8259_to_apic = X86IntelMPIOIntAssignment(
                 interrupt_type = 'ExtInt',
