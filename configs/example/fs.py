@@ -194,12 +194,12 @@ def build_test_system(np, SSDConfig):
             test_sys.iocache.cpu_side = test_sys.iobus.master
             test_sys.iocache.mem_side = test_sys.membus.slave
 
-        if buildEnv['TARGET_ISA'] == "arm":
-            if options.machine_type == "VExpress_GEM5_V1":
-                test_sys.iobridge = Bridge(delay='50ns',
-                                           ranges = [gicv2m_range])
-                test_sys.iobridge.slave = test_sys.iobus.master
-                test_sys.iobridge.master = test_sys.membus.slave
+            if buildEnv['TARGET_ISA'] == "arm":
+                if options.machine_type == "VExpress_GEM5_V1":
+                    test_sys.iobridge = Bridge(delay='50ns',
+                                               ranges = [gicv2m_range])
+                    test_sys.iobridge.slave = test_sys.iobus.master
+                    test_sys.iobridge.master = test_sys.membus.slave
 
         elif not options.external_memory_system:
             mem_range = list(test_sys.mem_ranges)   # Copy list
