@@ -34,7 +34,7 @@ typedef enum _INTERRUPT_MODE {
   INTERRUPT_MSIX
 } INTERRUPT_MODE;
 
-#define DMA_DELAY 256.90625
+#define DMA_DELAY 510
 
 class NVMeInterface : public PciDevice, public SimpleSSD::HIL::NVMe::Interface {
 private:
