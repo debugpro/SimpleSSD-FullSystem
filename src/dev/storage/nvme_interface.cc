@@ -23,6 +23,7 @@
 #include "debug/NVMeInterrupt.hh"
 #include "dev/storage/simplessd/hil/nvme/controller.hh"
 #include "dev/storage/simplessd/hil/nvme/def.hh"
+#include "dev/storage/simplessd/util/algorithm.hh"
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
 
