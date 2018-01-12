@@ -69,8 +69,8 @@ uint64_t calcPCIeDelay(uint64_t bytesize) {
   uint64_t nTLP = MAX((bytesize - 1) / maxPayloadSize + 1, 1);
   uint64_t nSymbol;
 
-  nSymbol = bytesize + nTLP * (packetOverhead + internalDelay[PCIE_GEN]);
-  nSymbol = (nSymbol - 1) / PCIE_LANE + 2;
+  nSymbol = bytesize + nTLP * (packetOverhead);
+  nSymbol = (nSymbol - 1) / PCIE_LANE + 2 + internalDelay[PCIE_GEN];
 
   return (uint64_t)(delay[PCIE_GEN] * encoding[PCIE_GEN] * nSymbol + 0.5f);
 }
