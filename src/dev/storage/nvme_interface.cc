@@ -78,9 +78,9 @@ uint64_t calcPCIeDelay(uint64_t bytesize) {
 } // namespace PCIExpress
 
 NVMeInterface::NVMeInterface(Params *p)
-    : PciDevice(p), configPath(p->SSDConfig), periodWork(0), periodQueue(0),
+    : PciDevice(p), configPath(p->SSDConfig), periodWork(0),
       lastReadDMAEndAt(0), lastWriteDMAEndAt(0), IS(0), ISold(0),
-      mode(INTERRUPT_PIN), queueEvent(this), workEvent(this) {
+      mode(INTERRUPT_PIN), workEvent(this) {
   SimpleSSD::Logger::initLogSystem(std::cout, std::cerr,
                                    []() -> uint64_t { return curTick(); });
 
@@ -486,26 +486,13 @@ void NVMeInterface::doWork() {
   schedule(workEvent, handling + periodWork);
 }
 
-void NVMeInterface::doQueue() {
-  Tick handling = curTick();
-
-  pController->collectSQueue(handling);
-
-  schedule(queueEvent, handling + periodQueue);
-}
-
-void NVMeInterface::enableController(Tick q, Tick w) {
-  periodQueue = q;
+void NVMeInterface::enableController(Tick w) {
   periodWork = w;
 
-  schedule(queueEvent, curTick() + periodQueue);
   schedule(workEvent, curTick() + periodWork);
 }
 
 void NVMeInterface::disableController() {
-  if (queueEvent.scheduled()) {
-    deschedule(queueEvent);
-  }
   if (workEvent.scheduled()) {
     deschedule(workEvent);
   }
