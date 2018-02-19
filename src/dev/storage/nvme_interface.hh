@@ -34,9 +34,6 @@ typedef enum _INTERRUPT_MODE {
   INTERRUPT_MSIX
 } INTERRUPT_MODE;
 
-#define PCIE_GEN PCIE_2
-#define PCIE_LANE 4
-
 class NVMeInterface : public PciDevice, public SimpleSSD::HIL::NVMe::Interface {
 private:
   std::string configPath;
