@@ -20,6 +20,7 @@
 #include "dev/storage/sata_interface.hh"
 
 #include "cpu/intr_control.hh"
+#include "dev/storage/simplessd/hil/sata/hba.hh"
 #include "dev/storage/simplessd/util/algorithm.hh"
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
@@ -51,12 +52,10 @@ SATAInterface::SATAInterface(Params *p)
   satacr.reserved = 0x00;
   satacr.offset = 0x00000048; // BAR4, Offset 0x10
 
-  pController = nullptr;
+  pHBA = new SimpleSSD::HIL::SATA::HBA(this, &conf);
 }
 
-SATAInterface::~SATAInterface() {
-  //  delete pController;
-}
+SATAInterface::~SATAInterface() { delete pHBA; }
 
 Tick SATAInterface::readConfig(PacketPtr pkt) {
   int offset = pkt->getAddr() & PCI_CONFIG_SIZE;
