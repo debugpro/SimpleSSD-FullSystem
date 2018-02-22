@@ -50,10 +50,12 @@ if env['TARGET_ISA'] == 'null':
 # Controllers
 SimObject('Ide.py')
 SimObject('NVMe.py')
+SimObject('SATA.py')
 
 Source('ide_ctrl.cc')
 Source('ide_disk.cc')
 Source('nvme_interface.cc')
+Source('sata_interface.cc')
 
 DebugFlag('IdeCtrl')
 DebugFlag('IdeDisk')
