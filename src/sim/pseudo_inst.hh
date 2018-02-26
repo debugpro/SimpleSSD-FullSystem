@@ -89,6 +89,9 @@ void switchcpu(ThreadContext *tc);
 void workbegin(ThreadContext *tc, uint64_t workid, uint64_t threadid);
 void workend(ThreadContext *tc, uint64_t workid, uint64_t threadid);
 void togglesync(ThreadContext *tc);
+uint64_t getTick(ThreadContext *tc, Addr t);
+void print(ThreadContext *tc, Addr str, uint64_t len);
+
 
 } // namespace PseudoInst
 

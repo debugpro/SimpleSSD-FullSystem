@@ -51,7 +51,7 @@
 #include <sstream>
 
 #include "base/intmath.hh"
-#include "base/misc.hh"
+#include "base/logging.hh"
 
 using namespace std;
 
@@ -73,7 +73,6 @@ FALRU::FALRU(const Params *p)
         cacheMask = 0;
     }
 
-    warmupBound = size/blkSize;
     numBlocks = size/blkSize;
 
     blks = new FALRUBlk[numBlocks];

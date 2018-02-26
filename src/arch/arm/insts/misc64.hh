@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013 ARM Limited
+ * Copyright (c) 2011-2013,2017-2018 ARM Limited
  * All rights reserved
  *
  * The license below extends only to copyright in the software and shall
@@ -41,6 +41,19 @@
 #define __ARCH_ARM_INSTS_MISC64_HH__
 
 #include "arch/arm/insts/static_inst.hh"
+
+class ImmOp64 : public ArmStaticInst
+{
+  protected:
+    uint64_t imm;
+
+    ImmOp64(const char *mnem, ExtMachInst _machInst,
+            OpClass __opClass, uint64_t _imm) :
+        ArmStaticInst(mnem, _machInst, __opClass), imm(_imm)
+    {}
+
+    std::string generateDisassembly(Addr pc, const SymbolTable *symtab) const;
+};
 
 class RegRegImmImmOp64 : public ArmStaticInst
 {
@@ -84,6 +97,40 @@ class UnknownOp64 : public ArmStaticInst
 
     UnknownOp64(const char *mnem, ExtMachInst _machInst, OpClass __opClass) :
         ArmStaticInst(mnem, _machInst, __opClass)
+    {}
+
+    std::string generateDisassembly(Addr pc, const SymbolTable *symtab) const;
+};
+
+class MiscRegRegImmOp64 : public ArmStaticInst
+{
+  protected:
+    MiscRegIndex dest;
+    IntRegIndex op1;
+    uint32_t imm;
+
+    MiscRegRegImmOp64(const char *mnem, ExtMachInst _machInst,
+                      OpClass __opClass, MiscRegIndex _dest,
+                      IntRegIndex _op1, uint32_t _imm) :
+        ArmStaticInst(mnem, _machInst, __opClass),
+        dest(_dest), op1(_op1), imm(_imm)
+    {}
+
+    std::string generateDisassembly(Addr pc, const SymbolTable *symtab) const;
+};
+
+class RegMiscRegImmOp64 : public ArmStaticInst
+{
+  protected:
+    IntRegIndex dest;
+    MiscRegIndex op1;
+    uint32_t imm;
+
+    RegMiscRegImmOp64(const char *mnem, ExtMachInst _machInst,
+                      OpClass __opClass, IntRegIndex _dest,
+                      MiscRegIndex _op1, uint32_t _imm) :
+        ArmStaticInst(mnem, _machInst, __opClass),
+        dest(_dest), op1(_op1), imm(_imm)
     {}
 
     std::string generateDisassembly(Addr pc, const SymbolTable *symtab) const;

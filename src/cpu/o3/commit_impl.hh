@@ -1,6 +1,6 @@
 /*
  * Copyright 2014 Google, Inc.
- * Copyright (c) 2010-2014 ARM Limited
+ * Copyright (c) 2010-2014, 2017 ARM Limited
  * All rights reserved
  *
  * The license below extends only to copyright in the software and shall
@@ -1044,6 +1044,12 @@ DefaultCommit<Impl>::commitInsts()
                                              (!(pc[0].instAddr() & 0x3)));
                 }
 
+                // at this point store conditionals should either have
+                // been completed or predicated false
+                assert(!head_inst->isStoreConditional() ||
+                       head_inst->isCompleted() ||
+                       !head_inst->readPredicate());
+
                 // Updates misc. registers.
                 head_inst->updateMiscRegs();
 
@@ -1219,7 +1225,10 @@ DefaultCommit<Impl>::commitHead(DynInstPtr &head_inst, unsigned inst_num)
         // needed to update the state as soon as possible.  This
         // prevents external agents from changing any specific state
         // that the trap need.
-        cpu->trap(inst_fault, tid, head_inst->staticInst);
+        cpu->trap(inst_fault, tid,
+                  head_inst->notAnInst() ?
+                      StaticInst::nullStaticInstPtr :
+                      head_inst->staticInst);
 
         // Exit state update mode to avoid accidental updating.
         thread[tid]->noSquashFromTC = false;

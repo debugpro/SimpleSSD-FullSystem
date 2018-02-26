@@ -47,7 +47,8 @@ import sys
 import m5
 from m5.defines import buildEnv
 from m5.objects import *
-from m5.util import addToPath, fatal
+from m5.util import addToPath, fatal, warn
+from m5.util.fdthelper import *
 
 addToPath('../')
 
@@ -82,7 +83,7 @@ def cmd_line_template():
         return open(options.command_line_file).read().strip()
     return None
 
-def build_test_system(np):
+def build_test_system(np, simplessd):
     cmdline = cmd_line_template()
     if buildEnv['TARGET_ISA'] == "alpha":
         test_sys = makeLinuxAlphaSystem(test_mem_mode, bm[0], options.ruby,
@@ -92,14 +93,18 @@ def build_test_system(np):
     elif buildEnv['TARGET_ISA'] == "sparc":
         test_sys = makeSparcSystem(test_mem_mode, bm[0], cmdline=cmdline)
     elif buildEnv['TARGET_ISA'] == "x86":
-        test_sys = makeLinuxX86System(test_mem_mode, options.num_cpus, bm[0],
-                options.ruby, cmdline=cmdline)
+        test_sys = makeLinuxX86System(test_mem_mode, simplessd,
+                                      options.num_cpus, bm[0], options.ruby,
+                                      cmdline=cmdline)
     elif buildEnv['TARGET_ISA'] == "arm":
         test_sys = makeArmSystem(test_mem_mode, options.machine_type,
-                                 options.num_cpus, bm[0], options.dtb_filename,
+                                 simplessd, options.num_cpus, bm[0],
+                                 options.dtb_filename,
                                  bare_metal=options.bare_metal,
                                  cmdline=cmdline,
-                                 external_memory=options.external_memory_system,
+                                 ignore_dtb=options.generate_dtb,
+                                 external_memory=
+                                   options.external_memory_system,
                                  ruby=options.ruby,
                                  security=options.enable_security_extensions)
         if options.enable_context_switch_stats_dump:
@@ -147,12 +152,6 @@ def build_test_system(np):
         test_sys.kvm_vm = KvmVM()
 
     if options.ruby:
-        # Check for timing mode because ruby does not support atomic accesses
-        if not (options.cpu_type == "DerivO3CPU" or
-                options.cpu_type == "TimingSimpleCPU"):
-            print >> sys.stderr, "Ruby requires TimingSimpleCPU or O3CPU!!"
-            sys.exit(1)
-
         Ruby.create_system(options, True, test_sys, test_sys.iobus,
                            test_sys._dma_ports)
 
@@ -185,13 +184,29 @@ def build_test_system(np):
                 cpu.interrupts[0].int_slave = test_sys.ruby._cpu_ports[i].master
 
     else:
+        gicv2m_range = AddrRange(0x2c1c0000, 0x2c1d0000 - 1)
+
         if options.caches or options.l2cache:
             # By default the IOCache runs at the system clock
             test_sys.iocache = IOCache(addr_ranges = test_sys.mem_ranges)
             test_sys.iocache.cpu_side = test_sys.iobus.master
             test_sys.iocache.mem_side = test_sys.membus.slave
+
+            if buildEnv['TARGET_ISA'] == "arm":
+                if options.machine_type == "VExpress_GEM5_V1":
+                    test_sys.iobridge = Bridge(delay='50ns',
+                                               ranges=[gicv2m_range])
+                    test_sys.iobridge.slave = test_sys.iobus.master
+                    test_sys.iobridge.master = test_sys.membus.slave
         elif not options.external_memory_system:
-            test_sys.iobridge = Bridge(delay='50ns', ranges = test_sys.mem_ranges)
+            mem_ranges = list(test_sys.mem_ranges)  # Copy list not reference
+
+            # Bypass MSI/MSI-X
+            if buildEnv['TARGET_ISA'] == "arm":
+                if options.machine_type == "VExpress_GEM5_V1":
+                    mem_ranges.append(gicv2m_range)
+
+            test_sys.iobridge = Bridge(delay='50ns', ranges=mem_ranges)
             test_sys.iobridge.slave = test_sys.iobus.master
             test_sys.iobridge.master = test_sys.membus.slave
 
@@ -254,7 +269,8 @@ def build_drive_system(np):
                                        cmdline=cmdline)
     elif buildEnv['TARGET_ISA'] == 'arm':
         drive_sys = makeArmSystem(drive_mem_mode, options.machine_type, np,
-                                  bm[1], options.dtb_filename, cmdline=cmdline)
+                                  bm[1], options.dtb_filename, cmdline=cmdline,
+                                  ignore_dtb=options.generate_dtb)
 
     # Create a top-level voltage domain
     drive_sys.voltage_domain = VoltageDomain(voltage = options.sys_voltage)
@@ -339,8 +355,13 @@ else:
                         mem=options.mem_size, os_type=options.os_type)]
 
 np = options.num_cpus
+simplessd = {
+    'interface': options.ssd_interface,
+    'config': options.ssd_config,
+    'disable_ide': options.disable_ide
+}
 
-test_sys = build_test_system(np)
+test_sys = build_test_system(np, simplessd)
 if len(bm) == 2:
     drive_sys = build_drive_system(np)
     root = makeDualRoot(True, test_sys, drive_sys, options.etherdump)
@@ -367,6 +388,32 @@ if options.timesync:
 
 if options.frame_capture:
     VncServer.frame_capture = True
+
+if buildEnv['TARGET_ISA'] == "arm" and options.generate_dtb:
+    # Sanity checks
+    if options.dtb_filename:
+        fatal("--generate-dtb and --dtb-filename cannot be specified at the"\
+             "same time.")
+
+    if options.machine_type not in ["VExpress_GEM5", "VExpress_GEM5_V1"]:
+        warn("Can only correctly generate a dtb for VExpress_GEM5_V1 " \
+             "platforms, unless custom hardware models have been equipped "\
+             "with generation functionality.")
+
+    # Generate a Device Tree
+    def create_dtb_for_system(system, filename):
+        state = FdtState(addr_cells=2, size_cells=2, cpu_cells=1)
+        rootNode = system.generateDeviceTree(state)
+
+        fdt = Fdt()
+        fdt.add_rootnode(rootNode)
+        dtb_filename = os.path.join(m5.options.outdir, filename)
+        return fdt.writeDtbFile(dtb_filename)
+
+    for sysname in ('system', 'testsys', 'drivesys'):
+        if hasattr(root, sysname):
+            sys = getattr(root, sysname)
+            sys.dtb_filename = create_dtb_for_system(sys, '%s.dtb' % sysname)
 
 Simulation.setWorkCountOptions(test_sys, options)
 Simulation.run(options, root, test_sys, FutureClass)
