@@ -202,7 +202,7 @@ def makeSparcSystem(mem_mode, mdesc=None, cmdline=None):
 
     return self
 
-def makeArmSystem(mem_mode, machine_type, num_cpus=1, simplessd, mdesc=None,
+def makeArmSystem(mem_mode, machine_type, simplessd, num_cpus=1, mdesc=None,
                   dtb_filename=None, bare_metal=False, cmdline=None,
                   external_memory="", ruby=False, security=False,
                   ignore_dtb=False):
@@ -527,7 +527,8 @@ def connectX86RubySystem(x86_sys):
     x86_sys.pc.attachIO(x86_sys.iobus, x86_sys._dma_ports)
 
 
-def makeX86System(mem_mode, numCPUs=1, simplessd, mdesc=None, self=None, Ruby=False):
+def makeX86System(mem_mode, simplessd, numCPUs=1, mdesc=None, self=None,
+                  Ruby=False):
     if self == None:
         self = X86System()
 
@@ -656,7 +657,7 @@ def makeX86System(mem_mode, numCPUs=1, simplessd, mdesc=None, self=None, Ruby=Fa
     self.intel_mp_table.base_entries = base_entries
     self.intel_mp_table.ext_entries = ext_entries
 
-def makeLinuxX86System(mem_mode, numCPUs=1, simplessd, mdesc=None, Ruby=False,
+def makeLinuxX86System(mem_mode, simplessd, numCPUs=1, mdesc=None, Ruby=False,
                        cmdline=None):
     self = LinuxX86System()
 
