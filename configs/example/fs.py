@@ -184,13 +184,29 @@ def build_test_system(np, simplessd):
                 cpu.interrupts[0].int_slave = test_sys.ruby._cpu_ports[i].master
 
     else:
+        gicv2m_range = AddrRange(0x2c1c0000, 0x2c1d0000 - 1)
+
         if options.caches or options.l2cache:
             # By default the IOCache runs at the system clock
             test_sys.iocache = IOCache(addr_ranges = test_sys.mem_ranges)
             test_sys.iocache.cpu_side = test_sys.iobus.master
             test_sys.iocache.mem_side = test_sys.membus.slave
+
+            if buildEnv['TARGET_ISA'] == "arm":
+                if options.machine_type == "VExpress_GEM5_V1":
+                    test_sys.iobridge = Bridge(delay='50ns',
+                                               ranges=[gicv2m_range])
+                    test_sys.iobridge.slave = test_sys.iobus.master
+                    test_sys.iobridge.master = test_sys.membus.slave
         elif not options.external_memory_system:
-            test_sys.iobridge = Bridge(delay='50ns', ranges = test_sys.mem_ranges)
+            mem_range = list(test_sys.mem_ranges)  # Copy list not reference
+
+            # Bypass MSI/MSI-X
+            if buildEnv['TARGET_ISA'] == "arm":
+                if options.machine_type == "VExpress_GEM5_V1":
+                    mem_range.append(gicv2m_range)
+
+            test_sys.iobridge = Bridge(delay='50ns', ranges=mem_ranges)
             test_sys.iobridge.slave = test_sys.iobus.master
             test_sys.iobridge.master = test_sys.membus.slave
 
