@@ -280,7 +280,7 @@ def makeArmSystem(mem_mode, machine_type, simplessd, num_cpus=1, mdesc=None,
         pci_devices.append(self.pci_ide)
 
     if simplessd['interface'] == 'nvme':
-        self.pci_nvme = NVMeController(SSDConfig=simplessd['config'])
+        self.pci_nvme = NVMeInterface(SSDConfig=simplessd['config'])
         pci_devices.append(self.pci_nvme)
     else:
         fatal(
