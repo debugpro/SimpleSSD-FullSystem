@@ -20,7 +20,6 @@
 #include "dev/storage/nvme_interface.hh"
 
 #include "cpu/intr_control.hh"
-#include "debug/NVMeInterrupt.hh"
 #include "dev/storage/simplessd/hil/nvme/controller.hh"
 #include "dev/storage/simplessd/hil/nvme/def.hh"
 #include "dev/storage/simplessd/util/algorithm.hh"
