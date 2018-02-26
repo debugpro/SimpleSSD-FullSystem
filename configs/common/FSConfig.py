@@ -202,7 +202,7 @@ def makeSparcSystem(mem_mode, mdesc=None, cmdline=None):
 
     return self
 
-def makeArmSystem(mem_mode, machine_type, num_cpus=1, mdesc=None,
+def makeArmSystem(mem_mode, machine_type, num_cpus=1, simplessd, mdesc=None,
                   dtb_filename=None, bare_metal=False, cmdline=None,
                   external_memory="", ruby=False, security=False,
                   ignore_dtb=False):
@@ -278,6 +278,13 @@ def makeArmSystem(mem_mode, machine_type, num_cpus=1, mdesc=None,
     else:
         self.pci_ide = IdeController(disks=[self.cf0])
         pci_devices.append(self.pci_ide)
+
+    if simplessd['interface'] == 'nvme':
+        self.pci_nvme = NVMeController(SSDConfig=simplessd['config'])
+        pci_devices.append(self.pci_nvme)
+    else:
+        fatal(
+            "Undefined SimpleSSD interface {}!".format(simplessd['interface']))
 
     self.mem_ranges = []
     size_remain = long(Addr(mdesc.mem()))
@@ -481,9 +488,12 @@ def connectX86ClassicSystem(x86_sys, numCPUs):
     #  2) the bridge to pass through the IO APIC (two pages, already contained in 1),
     #  3) everything in the IO address range up to the local APIC, and
     #  4) then the entire PCI address space and beyond.
+
+    # Address range 0xFEE00000 to 0xFEF00000 is reserved for MSI/MSI-X
     x86_sys.bridge.ranges = \
         [
-        AddrRange(0xC0000000, 0xFFFF0000),
+        AddrRange(0xC0000000, 0xFEE00000 - 1),
+        AddrRange(0xFEF00000, 0xFFFF0000),
         AddrRange(IO_address_space_base,
                   interrupts_address_space_base - 1),
         AddrRange(pci_config_address_space_base,
@@ -492,10 +502,12 @@ def connectX86ClassicSystem(x86_sys, numCPUs):
 
     # Create a bridge from the IO bus to the memory bus to allow access to
     # the local APIC (two pages)
+    # Forward MSI/MSI-X to membus
     x86_sys.apicbridge = Bridge(delay='50ns')
     x86_sys.apicbridge.slave = x86_sys.iobus.master
     x86_sys.apicbridge.master = x86_sys.membus.slave
-    x86_sys.apicbridge.ranges = [AddrRange(interrupts_address_space_base,
+    x86_sys.apicbridge.ranges = [AddrRange(0xFEE00000, 0xFEF00000 - 1),
+                                 AddrRange(interrupts_address_space_base,
                                            interrupts_address_space_base +
                                            numCPUs * APIC_range_size
                                            - 1)]
@@ -515,7 +527,7 @@ def connectX86RubySystem(x86_sys):
     x86_sys.pc.attachIO(x86_sys.iobus, x86_sys._dma_ports)
 
 
-def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
+def makeX86System(mem_mode, numCPUs=1, simplessd, mdesc=None, self=None, Ruby=False):
     if self == None:
         self = X86System()
 
@@ -560,6 +572,15 @@ def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
     # disk2.childImage(disk('linux-bigswap2.img'))
     self.pc.south_bridge.ide.disks = [disk0]  # [disk0, disk2]
 
+    if simplessd['interface'] == 'nvme':
+        self.pc.south_bridge.nvme.SSDConfig = simplessd['config']
+        self.pc.south_bridge.nvme.InterruptLine = 17
+        self.pc.south_bridge.nvme.InterruptPin = 1
+    else:
+        fatal(
+            "Undefined SimpleSSD interface {}!".format(simplessd['interface']))
+
+
     # Add in a Bios information structure.
     structures = [X86SMBiosBiosInformation()]
     self.smbios_table.structures = structures
@@ -599,7 +620,16 @@ def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
             source_bus_irq = 0 + (4 << 2),
             dest_io_apic_id = io_apic.id,
             dest_io_apic_intin = 16)
+    pci_dev5_inta = X86IntelMPIOIntAssignment(
+            interrupt_type = 'INT',
+            polarity = 'ConformPolarity',
+            trigger = 'ConformTrigger',
+            source_bus_id = 0,
+            source_bus_irq = 0 + (5 << 2),
+            dest_io_apic_id = io_apic.id,
+            dest_io_apic_intin = 17)
     base_entries.append(pci_dev4_inta)
+    base_entries.append(pci_dev5_inta)
     def assignISAInt(irq, apicPin):
         assign_8259_to_apic = X86IntelMPIOIntAssignment(
                 interrupt_type = 'ExtInt',
@@ -626,12 +656,12 @@ def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
     self.intel_mp_table.base_entries = base_entries
     self.intel_mp_table.ext_entries = ext_entries
 
-def makeLinuxX86System(mem_mode, numCPUs=1, mdesc=None, Ruby=False,
+def makeLinuxX86System(mem_mode, numCPUs=1, simplessd, mdesc=None, Ruby=False,
                        cmdline=None):
     self = LinuxX86System()
 
     # Build up the x86 system and then specialize it for Linux
-    makeX86System(mem_mode, numCPUs, mdesc, self, Ruby)
+    makeX86System(mem_mode, numCPUs, simplessd, mdesc, self, Ruby)
 
     # We assume below that there's at least 1MB of memory. We'll require 2
     # just to avoid corner cases.
