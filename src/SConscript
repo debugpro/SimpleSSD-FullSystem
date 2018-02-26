@@ -388,7 +388,7 @@ for root, dirs, files in os.walk(base_dir, topdown=True):
     Dir(root[len(base_dir) + 1:])
 
 # Include SimpleSSD root path
-env.Append(CPPPATH=Dir('src/dev/storage/simplessd'))
+env.Append(CPPPATH=Dir('./dev/storage/simplessd'))
 
 ########################################################################
 #
