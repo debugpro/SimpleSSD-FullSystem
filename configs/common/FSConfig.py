@@ -555,10 +555,10 @@ def makeX86System(mem_mode, numCPUs=1, mdesc=None, self=None, Ruby=False):
 
     # Disks
     disk0 = CowIdeDisk(driveID='master')
-    disk2 = CowIdeDisk(driveID='master')
+    # disk2 = CowIdeDisk(driveID='master')
     disk0.childImage(mdesc.disk())
-    disk2.childImage(disk('linux-bigswap2.img'))
-    self.pc.south_bridge.ide.disks = [disk0, disk2]
+    # disk2.childImage(disk('linux-bigswap2.img'))
+    self.pc.south_bridge.ide.disks = [disk0]  # [disk0, disk2]
 
     # Add in a Bios information structure.
     structures = [X86SMBiosBiosInformation()]
