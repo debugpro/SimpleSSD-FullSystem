@@ -372,3 +372,11 @@ def addFSOptions(parser):
     parser.add_option("--command-line-file", action="store",
                       default=None, type="string",
                       help="File with a template for the kernel command line")
+
+    # SimpleSSD options
+    parser.add_option("--ssd-interface", action="store", type="string",
+                      default="nvme",
+                      help="Interface to use to connect SimpleSSD.")
+    parser.add_option("--ssd-config", action="store", type="string",
+                      default=None,
+                      help="Path to SimpleSSD configuration file.")
