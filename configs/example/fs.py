@@ -199,12 +199,12 @@ def build_test_system(np, simplessd):
                     test_sys.iobridge.slave = test_sys.iobus.master
                     test_sys.iobridge.master = test_sys.membus.slave
         elif not options.external_memory_system:
-            mem_range = list(test_sys.mem_ranges)  # Copy list not reference
+            mem_ranges = list(test_sys.mem_ranges)  # Copy list not reference
 
             # Bypass MSI/MSI-X
             if buildEnv['TARGET_ISA'] == "arm":
                 if options.machine_type == "VExpress_GEM5_V1":
-                    mem_range.append(gicv2m_range)
+                    mem_ranges.append(gicv2m_range)
 
             test_sys.iobridge = Bridge(delay='50ns', ranges=mem_ranges)
             test_sys.iobridge.slave = test_sys.iobus.master
