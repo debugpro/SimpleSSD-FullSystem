@@ -266,18 +266,24 @@ def makeArmSystem(mem_mode, machine_type, simplessd, num_cpus=1, mdesc=None,
     # Attach any PCI devices this platform supports
     self.realview.attachPciDevices()
 
-    self.cf0 = CowIdeDisk(driveID='master')
-    self.cf0.childImage(mdesc.disk())
-    # Old platforms have a built-in IDE or CF controller. Default to
-    # the IDE controller if both exist. New platforms expect the
-    # storage controller to be added from the config script.
-    if hasattr(self.realview, "ide"):
-        self.realview.ide.disks = [self.cf0]
-    elif hasattr(self.realview, "cf_ctrl"):
-        self.realview.cf_ctrl.disks = [self.cf0]
+    if simplessd['disable_ide']:
+        if hasattr(self.realview, "ide"):
+            delattr(self.realview, "ide")
+        elif hasattr(self.realview, "cf_ctrl"):
+            delattr(self.realview, "cf_ctrl")
     else:
-        self.pci_ide = IdeController(disks=[self.cf0])
-        pci_devices.append(self.pci_ide)
+        self.cf0 = CowIdeDisk(driveID='master')
+        self.cf0.childImage(mdesc.disk())
+        # Old platforms have a built-in IDE or CF controller. Default to
+        # the IDE controller if both exist. New platforms expect the
+        # storage controller to be added from the config script.
+        if hasattr(self.realview, "ide"):
+            self.realview.ide.disks = [self.cf0]
+        elif hasattr(self.realview, "cf_ctrl"):
+            self.realview.cf_ctrl.disks = [self.cf0]
+        else:
+            self.pci_ide = IdeController(disks=[self.cf0])
+            pci_devices.append(self.pci_ide)
 
     if simplessd['interface'] == 'nvme':
         self.pci_nvme = NVMeInterface(SSDConfig=simplessd['config'])
@@ -566,12 +572,15 @@ def makeX86System(mem_mode, simplessd, numCPUs=1, mdesc=None, self=None,
 
     self.intrctrl = IntrControl()
 
-    # Disks
-    disk0 = CowIdeDisk(driveID='master')
-    # disk2 = CowIdeDisk(driveID='master')
-    disk0.childImage(mdesc.disk())
-    # disk2.childImage(disk('linux-bigswap2.img'))
-    self.pc.south_bridge.ide.disks = [disk0]  # [disk0, disk2]
+    if simplessd['disable_ide']:
+        delattr(self.pc.south_bridge, 'ide')
+    else:
+        # Disks
+        disk0 = CowIdeDisk(driveID='master')
+        # disk2 = CowIdeDisk(driveID='master')
+        disk0.childImage(mdesc.disk())
+        # disk2.childImage(disk('linux-bigswap2.img'))
+        self.pc.south_bridge.ide.disks = [disk0]  # [disk0, disk2]
 
     if simplessd['interface'] == 'nvme':
         self.pc.south_bridge.nvme.SSDConfig = simplessd['config']

@@ -357,7 +357,8 @@ else:
 np = options.num_cpus
 simplessd = {
     'interface': options.ssd_interface,
-    'config': options.ssd_config
+    'config': options.ssd_config,
+    'disable_ide': options.disable_ide
 }
 
 test_sys = build_test_system(np, simplessd)

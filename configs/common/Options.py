@@ -380,3 +380,5 @@ def addFSOptions(parser):
     parser.add_option("--ssd-config", action="store", type="string",
                       default=None,
                       help="Path to SimpleSSD configuration file.")
+    parser.add_option("--disable-ide", action="store_true",
+                      help="Disable default IDE controller.")
