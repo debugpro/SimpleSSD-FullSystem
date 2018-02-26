@@ -64,6 +64,7 @@
 #include "cpu/quiesce_event.hh"
 #include "cpu/thread_context.hh"
 #include "debug/Loader.hh"
+#include "debug/M5Print.hh"
 #include "debug/PseudoInst.hh"
 #include "debug/Quiesce.hh"
 #include "debug/WorkItems.hh"
@@ -197,9 +198,14 @@ pseudoInst(ThreadContext *tc, uint8_t func, uint8_t subfunc)
         workend(tc, args[0], args[1]);
         break;
 
+      case M5OP_GET_TICK:
+        return getTick(tc, args[0]);
+
+      case M5OP_PRINT:
+        print(tc, args[0], args[1]);
+        break;
+
       case M5OP_ANNOTATE:
-      case M5OP_RESERVED2:
-      case M5OP_RESERVED3:
       case M5OP_RESERVED4:
       case M5OP_RESERVED5:
         warn("Unimplemented m5 op (0x%x)\n", func);
@@ -714,6 +720,33 @@ workend(ThreadContext *tc, uint64_t workid, uint64_t threadid)
             exitSimLoop("work items exit count reached");
         }
     }
+}
+
+uint64_t
+getTick(ThreadContext *tc, Addr t) {
+  struct timespec real;
+
+  uint64_t tick = curTick();
+  real.tv_nsec = (tick / 1000) % 1000000000;
+  real.tv_sec = (tick / 1000) / 1000000000;
+
+  if (t) {
+    CopyIn(tc, t, &real, sizeof(struct timespec));
+  }
+
+  return tick;
+}
+
+void
+print(ThreadContext *tc, Addr str, uint64_t len) {
+  char *buf = (char *)calloc(len + 1, 1);
+
+  if (str) {
+    CopyOut(tc, buf, str, len);
+    DPRINTF(M5Print, "Log from guest: %s\n", buf);
+  }
+
+  free(buf);
 }
 
 } // namespace PseudoInst

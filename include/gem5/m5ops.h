@@ -37,6 +37,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <time.h>
 
 #include <gem5/asm/generic/m5op_flags.h>
 
@@ -66,6 +67,9 @@ void m5_load_symbol();
 void m5_panic(void);
 void m5_work_begin(uint64_t workid, uint64_t threadid);
 void m5_work_end(uint64_t workid, uint64_t threadid);
+uint64_t m5_get_tick(struct timespec *tick);
+void m5_print(const char *string, uint64_t length);
+
 
 // These operations are for critical path annotation
 void m5a_bsm(char *sm, const void *id, int flags);
