@@ -12,7 +12,7 @@ See COPYING file for more information.
 ### BSD License
 See LICENSE file for more details about the license.
  - All unmodified/original files from gem5.
- - All modified files by CAMELab. You may want to check #1.
+ - All modified files by CAMELab.
 
 ### GPLv3 License
 Following newly added files by CAMELab are GPLv3 licensed.
