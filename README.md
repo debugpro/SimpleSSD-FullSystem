@@ -1,7 +1,7 @@
 # SimpleSSD Full System version 2.0
 SimpleSSD Full System version 2.0.
 
-See [SimpleSSD Homepage](http://simplessd.yonsei.ac.kr/) for more details
+See [SimpleSSD Homepage](https://simplessd.org/) for more details
 
 ## License
 This project is fork of [gem5](http://gem5.org), the full-system simulator.
