@@ -485,6 +485,9 @@ void NVMeInterface::doWork() {
 
   pController->work(handling);
 
+  // Update stat values
+  updateStats();
+
   schedule(workEvent, handling + periodWork);
 }
 
