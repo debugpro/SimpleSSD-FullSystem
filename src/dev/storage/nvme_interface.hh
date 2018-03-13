@@ -35,7 +35,7 @@ typedef enum _INTERRUPT_MODE {
 } INTERRUPT_MODE;
 
 class NVMeInterface : public PciDevice, public SimpleSSD::HIL::NVMe::Interface {
-private:
+ private:
   std::string configPath;
   SimpleSSD::ConfigReader conf;
 
@@ -70,7 +70,7 @@ private:
   // Stats
   Stats::Scalar *pStats;
 
-public:
+ public:
   typedef NVMeInterfaceParams Params;
   const Params *params() const { return (const Params *)_params; }
   NVMeInterface(Params *p);
