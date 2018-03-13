@@ -67,6 +67,9 @@ private:
 
   void writeInterrupt(Addr, size_t, uint8_t *);
 
+  // Stats
+  Stats::Scalar *pStats;
+
 public:
   typedef NVMeInterfaceParams Params;
   const Params *params() const { return (const Params *)_params; }
@@ -81,6 +84,10 @@ public:
 
   void serialize(CheckpointOut &cp) const override;
   void unserialize(CheckpointIn &cp) override;
+
+  void regStats() override;
+  void resetStats() override;
+  void updateStats();
 
   // Interface <-> Controller
   uint64_t dmaRead(uint64_t, uint64_t, uint8_t *, uint64_t &) override;

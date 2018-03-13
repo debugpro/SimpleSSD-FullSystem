@@ -20,9 +20,6 @@
 #include "dev/storage/nvme_interface.hh"
 
 #include "cpu/intr_control.hh"
-#include "dev/storage/simplessd/hil/nvme/controller.hh"
-#include "dev/storage/simplessd/hil/nvme/def.hh"
-#include "dev/storage/simplessd/util/algorithm.hh"
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
 
@@ -30,8 +27,11 @@
 #undef warn
 #undef info
 
+#include "dev/storage/simplessd/hil/nvme/controller.hh"
+#include "dev/storage/simplessd/hil/nvme/def.hh"
 #include "dev/storage/simplessd/log/log.hh"
 #include "dev/storage/simplessd/log/trace.hh"
+#include "dev/storage/simplessd/util/algorithm.hh"
 #include "dev/storage/simplessd/util/interface.hh"
 
 NVMeInterface::NVMeInterface(Params *p)
@@ -43,6 +43,7 @@ NVMeInterface::NVMeInterface(Params *p)
       IS(0),
       ISold(0),
       mode(INTERRUPT_PIN),
+      pStats(nullptr),
       workEvent(this),
       completionEvent(this) {
   SimpleSSD::Logger::initLogSystem(std::cout, std::cerr,
@@ -57,6 +58,7 @@ NVMeInterface::NVMeInterface(Params *p)
 
 NVMeInterface::~NVMeInterface() {
   delete pController;
+  delete[] pStats;
 }
 
 Tick NVMeInterface::readConfig(PacketPtr pkt) {
@@ -518,6 +520,40 @@ void NVMeInterface::serialize(CheckpointOut &cp) const {
 
 void NVMeInterface::unserialize(CheckpointIn &cp) {
   // FIXME: Not implemented
+}
+
+void NVMeInterface::regStats() {
+  std::vector<SimpleSSD::Stats> list;
+
+  PciDevice::regStats();
+
+  pController->getStats(list);
+
+  if (list.size() > 0) {
+    pStats = new Stats::Scalar[list.size()]();
+
+    for (uint32_t i = 0; i < list.size(); i++) {
+      pStats[i].name(name() + "." + list[i].name).desc(list[i].desc);
+    }
+  }
+}
+
+void NVMeInterface::resetStats() {
+  PciDevice::resetStats();
+
+  pController->resetStats();
+
+  updateStats();
+}
+
+void NVMeInterface::updateStats() {
+  std::vector<uint64_t> values;
+
+  pController->getStatValues(values);
+
+  for (uint32_t i = 0; i < values.size(); i++) {
+    pStats[i] = values[i];
+  }
 }
 
 NVMeInterface *NVMeInterfaceParams::create() {
