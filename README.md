@@ -1,22 +1,7 @@
-# SimpleSSD Full System version 2.0
-SimpleSSD Full System version 2.0.
+## This repository will be REMOVED
+This repository contains old version of SimpleSSD (renamed to v1.1).  
+Stable source code of SimpleSSD v2.0 (Amber) will be released to github before MICRO 51.  
 
-See [SimpleSSD Homepage](https://simplessd.org/) for more details
+Also, frequently asked questions and execution instructions will be presented to [SimpleSSD Homepage](https://simplessd.org) before MICRO 51.
 
-## License
-This project is fork of [gem5](http://gem5.org), the full-system simulator.
-You can get the original source code of gem5 [here](https://github.com/gem5/gem5).
-
-See COPYING file for more information.
-
-### BSD License
-See LICENSE file for more details about the license.
- - All unmodified/original files from gem5.
- - All modified files by CAMELab.
-
-### GPLv3 License
-Following newly added files by CAMELab are GPLv3 licensed.
-See LICENSE_GPLv3 for more details about the license.
- - src/dev/storage/NVMe.py
- - src/dev/storage/nvme_interface.cc
- - src/dev/storage/nvme_interface.hh
+This project is managed by [CAMELab](http://camelab.org).
